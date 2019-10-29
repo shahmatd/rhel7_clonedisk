@@ -1,5 +1,16 @@
 #!/bin/bash
-
+######################################################
+# Author: Shahmat Dahlan <shahmat@gmail.com>
+# Date: 30/10/2019 05:30 AM
+# Description:
+#      To basically perform an OS cloning for OS with
+# two disk /dev/sda and /dev/sdb of the same size.
+# Filesystems are xfs. Uses dd to clone
+# Activation of booting to secondary from the grub2
+# menu is manual. e.g. When the grub2 menu appears,
+# press the 'e' key to make the changes and 'ctrl+x'
+# to boot into the second disk
+######################################################
 source_dsk=/dev/sda
 target_dsk=/dev/sdb
 source_vg=centos
@@ -53,7 +64,12 @@ else
 fi
 
 # Activate vg target_vg centos1
-/sbin/vgchange -ay centos1
+if /sbin/vgchange -ay ${target_vg}; then
+	echo "Activate vg ${target_vg} is successful, proceeding..."
+else
+	echo "Activate vg ${target_vg} failed, exiting..."
+	exit 5
+fi
 
 # Calculate the number of existing LV
 lv_count=$(/sbin/lvs -o lvname ${target_vg} | wc -l)
@@ -65,13 +81,13 @@ for lv in $(/sbin/lvs -o lvname ${target_vg} | tail -${lv_count_m} | grep -v swa
 		echo "xfs_repair -L /dev/mapper/${target_vg}-${lv} is successful, proceeding..."
 	else
 		echo "xfs_repair -L /dev/mapper/${target_vg}-${lv} failed, exiting..."
-		exit 5
+		exit 6
 	fi
 	if xfs_admin -U generate /dev/mapper/${target_vg}-${lv}; then
 		echo "xfs_admin -U generate /dev/mapper/${target_vg}-${lv} is successful, proceeding..."
 	else
 		echo "xfs_admin -U generate /dev/mapper/${target_vg}-${lv} failed, exiting..."
-		exit 6
+		exit 7
 	fi
 done
 
