@@ -1,5 +1,5 @@
 #!/bin/bash
-###############################################################################
+########################################################################################
 # Author: Shahmat Dahlan <shahmatd@gmail.com>
 # Date: 30/10/2019
 # Description: RHEL 7.x/CentOS 7.x OS dd cloning # all filesystems are xfs.
@@ -10,9 +10,10 @@
 #    both OS on the grub menu at the next reboot
 #    (a) One way is to update the entry in /boot/grub2/grub.cfg on the first
 #        disk as an additional entry
-#    (b) Edit the grub menu at the next reboot and change the root=hd0,msdos1 
+#    (b) Edit the grub menu at the next reboot and change the root=hd0,msdos1
 #        to root=hd1,msdos1
-###############################################################################
+# URL: https://github.com/shahmatd/rhel7_clonedisk/blob/master/rhel7_clone_osdisk.bash
+########################################################################################
 
 source_dsk=/dev/sda
 target_dsk=/dev/sdb
