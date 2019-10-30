@@ -2,3 +2,5 @@
 
 Assumptions
 -----------
+* All filesystems XFS
+* Systems is a non-EFI, this has not yet been tested on EFI systems
