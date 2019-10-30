@@ -1,4 +1,18 @@
 #!/bin/bash
+###############################################################################
+# Author: Shahmat Dahlan <shahmatd@gmail.com>
+# Date: 30/10/2019
+# Description: RHEL 7.x/CentOS 7.x OS dd cloning # all filesystems are xfs.
+# Pending:
+# 1. Running of grub2-mkconfig -o /boot/grub2/grub.cfg on the chroot environ-
+#    ment (/dev/sdb)
+# 2. Update of the /boot/grub2/grub.cfg on the first disk, so grub will reflect
+#    both OS on the grub menu at the next reboot
+#    (a) One way is to update the entry in /boot/grub2/grub.cfg on the first
+#        disk as an additional entry
+#    (b) Edit the grub menu at the next reboot and change the root=hd0,msdos1 
+#        to root=hd1,msdos1
+###############################################################################
 
 source_dsk=/dev/sda
 target_dsk=/dev/sdb
@@ -99,8 +113,20 @@ for lv in $(/sbin/lvs -o lvname ${target_vg} | tail -${lv_count_m} | grep -v swa
 done
 
 # Mount first the root filesystem for the lines below to be able to use the /etc/fstab
-mount /dev/mapper/${target_vg}-root /a
-mount /dev/sdb1 /a/boot
+echo
+echo "-------------------"
+if mount /dev/mapper/${target_vg}-root /a; then
+	echo "mount /dev/mapper/${target_vg}-root /a is successful, proceeding..."
+else
+	echo "mount /dev/mapper/${target_vg}-root /a failed, exiting..."
+	exit 8
+fi
+if mount /dev/sdb1 /a/boot; then
+	echo "mount /dev/sdb1 /a/boot is successful, proceeding..."
+else
+	echo "mount /dev/sdb1 /a/boot failed, exiting..."
+	exit 9
+fi
 
 # Extract only the uuid for /dev/sda1 and /dev/sdb1
 disk1_uuid=$(blkid | grep /dev/sda1 | awk '{print $2}' | awk -F= '{print $2}' | sed 's/"//g')
@@ -109,14 +135,18 @@ disk2_uuid=$(blkid | grep /dev/sdb1 | awk '{print $2}' | awk -F= '{print $2}' | 
 # Make a backup copy of the files /etc/fstab /boot/grub2/grub.cfg and /etc/default/grub on the second disk /dev/sdb
 today=$(date +%Y%m%d_%H%M%S)
 for file in /a/etc/fstab /a/boot/grub2/grub.cfg /a/etc/default/grub; do
+	echo
+	echo "-------------------"
 	if [ -f $file ]; then
+		echo "Making a backup of $file to $file.bak_${today}"
 		cp $file $file.bak_${today}
 	fi
 done
 
 # Update /etc/fstab on the second disk /dev/sdb mounted on /a
-sed "s/${disk1_uuid}/${disk2_uuid}/" /a/etc/fstab.bak_${today} >/a/etc/fstab
-sed "s/${source_vg}/${target_vg}/" /a/etc/fstab.bak_${today} >/a/etc/fstab
+sed "s/${disk1_uuid}/${disk2_uuid}/" /a/etc/fstab.bak_${today} >/a/etc/fstab.bak_1
+sed "s/${source_vg}/${target_vg}/" /a/etc/fstab.bak_1 >/a/etc/fstab
+if [ -f /a/etc/fstab.bak_1 ]; then rm /a/etc/fstab.bak_1; fi
 
 # Update /boot/grub2/grub.cfg and replace all the first disk /dev/sda to the second disk /dev/sdb
 sed "s/${disk1_uuid}/${disk2_uuid}/" /a/boot/grub2/grub.cfg.bak_${today} >/a/boot/grub2/grub.cfg
@@ -135,3 +165,10 @@ mount -t proc none /a/proc
 mount -o bind /sys /a/sys
 mount -o bind /dev /a/dev
 
+echo
+echo "-------------------"
+echo "Completed."
+echo "Please chroot into the environment on the second disk /dev/sdb:"
+echo "   # chroot /a"
+echo
+echo "And run grub2-mkconfig -o /boot/grub2/grub.cfg"
